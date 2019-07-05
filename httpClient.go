@@ -22,9 +22,9 @@ const (
 )
 
 type HttpClient struct {
-	postData 	  map[string]interface{} // save post data
-	postContents  []byte				 // Custom send data
-	headers       map[string]string		 // http headers
+	postData      map[string]interface{} //
+	postContents  []byte
+	headers       map[string]string
 	timeOut       time.Duration
 	postDataType  int
 	proxy         string
@@ -33,95 +33,95 @@ type HttpClient struct {
 }
 
 func NewHttpClient() *HttpClient {
-	httpClient := HttpClient{}
-	httpClient.timeOut = time.Second * 30
-	httpClient.postDataType = POST_DATA_TYPE_FORM
-	return &httpClient
+	hClient := HttpClient{}
+	hClient.timeOut = time.Second * 30
+	hClient.postDataType = POST_DATA_TYPE_FORM
+	return &hClient
 }
 
 // Set contents type
-func (httpClient *HttpClient) SetPostDataType(dataType int) {
-	httpClient.postDataType = dataType
+func (hClient *HttpClient) SetPostDataType(dataType int) {
+	hClient.postDataType = dataType
 }
 
-func (httpClient *HttpClient) SetPostData(postData interface{}) {
-	httpClient.postContents, _ = json.Marshal(postData)
+func (hClient *HttpClient) SetPostData(postData interface{}) {
+	hClient.postContents, _ = json.Marshal(postData)
 }
 
-// add form or json 
-func (httpClient *HttpClient) AddPostData(key string, value interface{}) {
-	if httpClient.postData == nil {
-		httpClient.postData = make(map[string]interface{})
+// add
+func (hClient *HttpClient) AddFormData(key string, value interface{}) {
+	if hClient.postData == nil {
+		hClient.postData = make(map[string]interface{})
 	}
-	httpClient.postData[key] = value
+	hClient.postData[key] = value
 }
 
 // Set the proxy host:port or http://host:port
 // example 127.0.0.1:8888
-func (httpClient *HttpClient) SetProxy(proxy string) {
+func (hClient *HttpClient) SetProxy(proxy string) {
 	if strings.Contains(proxy, "://") {
-		httpClient.proxy = proxy
+		hClient.proxy = proxy
 	} else {
-		httpClient.proxy = "http://" + proxy
+		hClient.proxy = "http://" + proxy
 	}
 }
 
-// like uid=9; unick="ben"
-func (httpClient *HttpClient) SetCookie(cookie string) {
-	httpClient.AddHeader("Cookie", cookie)
+func (hClient *HttpClient) SetCookie(cookie string) {
+	hClient.AddHeader("Cookie", cookie)
 }
 
-// return cookies like uid=9; unick="ben"
-func (httpClient *HttpClient) GetCookie() string {
-	return httpClient.receiveCookie
+func (hClient *HttpClient) GetCookie() string {
+	return hClient.receiveCookie
 }
 
-// add http header 
-func (httpClient *HttpClient) AddHeader(key, value string) {
-	if httpClient.headers == nil {
-		httpClient.headers = make(map[string]string)
+func (hClient *HttpClient) AddHeader(key, value string) {
+	if hClient.headers == nil {
+		hClient.headers = make(map[string]string)
 	}
-	httpClient.headers[key] = value
+	hClient.headers[key] = value
 }
 
-// enable or disable gzip
-func (httpClient *HttpClient) EncodingGZip(bUse bool) {
-	httpClient.useGZip = bUse
+//
+func (hClient *HttpClient) EncodingGZip(bUse bool) {
+	hClient.useGZip = bUse
 }
 
-// set referer url
-func (httpClient *HttpClient) SetReferer(refUrl string) {
-	httpClient.AddHeader("Referer", refUrl)
-}
-
-// The Post request
-func (httpClient *HttpClient) Post(link string) (string, error) {
-	if httpClient.postContents == nil || len(httpClient.postContents) == 0 {
-		httpClient.postContents = httpClient.getPostData()
+// Post
+func (hClient *HttpClient) Post(link string) (string, error) {
+	if hClient.postContents == nil || len(hClient.postContents) == 0 {
+		hClient.postContents = hClient.getPostData()
 	}
-	return httpClient.do("POST", link, httpClient.postContents)
+	return hClient.do("POST", link, hClient.postContents)
 }
 
-// The GET request
-func (httpClient *HttpClient) Get(link string) (string, error) {
-	return httpClient.do("GET", link, nil)
+func (hClient *HttpClient) Get(link string) (string, error) {
+	httpClient.postDataType = POST_DATA_TYPE_FORM
+	formData := httpClient.getPostData()
+	if len(formData) > 0 {
+		formStr := string(formData)
+		if strings.Contains(link, "?") {
+			link += formStr
+		}else{
+			link += "?" + formStr
+		}
+	}
+	return hClient.do("GET", link, nil)
 }
 
-
-func (httpClient *HttpClient) getPostData() []byte {
-	if httpClient.postData == nil || len(httpClient.postData) == 0 {
+func (hClient *HttpClient) getPostData() []byte {
+	if hClient.postData == nil || len(hClient.postData) == 0 {
 		return []byte("")
 	}
 
-	if httpClient.postDataType == POST_DATA_TYPE_JSON {
-		data, _ := json.Marshal(httpClient.postData)
+	if hClient.postDataType == POST_DATA_TYPE_JSON {
+		data, _ := json.Marshal(hClient.postData)
 
 		// clean postdata
-		httpClient.postData = nil
+		hClient.postData = nil
 		return data
 	} else {
 		var data string
-		for key, value := range httpClient.postData {
+		for key, value := range hClient.postData {
 			separate := "&"
 			if len(data) == 0 {
 				separate = ""
@@ -129,24 +129,27 @@ func (httpClient *HttpClient) getPostData() []byte {
 			data += fmt.Sprintf("%s%s=%v", separate, key, value)
 		}
 		// clean postdata
-		httpClient.postData = nil
+		hClient.postData = nil
 		return []byte(data)
 	}
 }
 
-func (httpClient *HttpClient) setHeaders(request *http.Request) {
-	for k, v := range httpClient.headers {
+func (hClient *HttpClient) SetReferer(refUrl string) {
+	hClient.AddHeader("Referer", refUrl)
+}
+
+func (hClient *HttpClient) setHeaders(request *http.Request) {
+	for k, v := range hClient.headers {
 		request.Header.Set(k, v)
 	}
 }
 
-func (httpClient *HttpClient) do(method string, link string, data []byte) (string, error) {
-
+func (hClient *HttpClient) do(method string, link string, data []byte) (string, error) {
 	var request *http.Request
 	var err error
 	if data != nil && len(data) != 0 {
 		// 大于1024字节使用gzip压缩
-		if httpClient.useGZip {
+		if hClient.useGZip {
 			var zBuf bytes.Buffer
 			zipWrite := gzip.NewWriter(&zBuf)
 			defer zipWrite.Close()
@@ -164,15 +167,15 @@ func (httpClient *HttpClient) do(method string, link string, data []byte) (strin
 	}
 
 	// clean postdata
-	httpClient.postContents = nil
+	hClient.postContents = nil
 
 	if err != nil {
 		return "", err
 	} else {
 		var transport *http.Transport = nil
-		if httpClient.proxy != "" {
+		if hClient.proxy != "" {
 			URL := url.URL{}
-			urlProxy, _ := URL.Parse(httpClient.proxy)
+			urlProxy, _ := URL.Parse(hClient.proxy)
 			transport = &http.Transport{
 				Proxy: http.ProxyURL(urlProxy),
 			}
@@ -181,12 +184,12 @@ func (httpClient *HttpClient) do(method string, link string, data []byte) (strin
 		}
 
 		netClient := &http.Client{
-			Timeout:   httpClient.timeOut,
+			Timeout:   hClient.timeOut,
 			Transport: transport,
 		}
 
 		// set header
-		httpClient.setHeaders(request)
+		hClient.setHeaders(request)
 
 		if response, err := netClient.Do(request); err != nil {
 			return "", err
@@ -195,10 +198,10 @@ func (httpClient *HttpClient) do(method string, link string, data []byte) (strin
 			// save recevie cookie
 			for _, v := range response.Cookies() {
 				separate := "; "
-				if httpClient.receiveCookie == "" {
+				if hClient.receiveCookie == "" {
 					separate = ""
 				}
-				httpClient.receiveCookie += fmt.Sprintf("%s%s=%s", separate, v.Name, v.Value)
+				hClient.receiveCookie += fmt.Sprintf("%s%s=%s", separate, v.Name, v.Value)
 			}
 
 			if data, err := ioutil.ReadAll(response.Body); err == nil {
