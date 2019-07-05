@@ -2,7 +2,7 @@
 // Licensed under the MIT license.
 // Powerful and easy to use http client
 
-package httpclient
+package httpClient
 
 import (
 	"bytes"
