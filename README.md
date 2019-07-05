@@ -1,1 +1,2 @@
-# httpClient
+Easy HTTP client for golang
+
